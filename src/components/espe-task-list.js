@@ -4,144 +4,217 @@ import './espe-task-modal.js';
 import './espe-task-detail.js';
 
 export class EspeTaskList extends LitElement {
-  static properties = {
-    tasks: { type: Array },
-    showAddModal: { type: Boolean },
-    showDetailModal: { type: Boolean },
-    currentTaskId: { type: Number },
-    editingTaskId: { type: Number },
-    isEditing: { type: Boolean }
+  static get properties(){
+    return {
+      tasks: { type: Array },
+      _showAddModal: { state: true },
+      _showDetailModal: { state: true },
+      _currentTaskId: { state: true },
+      _isEditing: { state: true },
+      _editingTaskId: { state: true },
+    };
   };
+
+  static get styles(){
+    return css`
+      .container-boton{
+        display: flex;
+        flex-direction: column;
+        align-items: end;
+        margin-block: 25px;
+      }
+      button.primary {
+        background-color: #019863;
+        border: none;
+        color: white;
+        padding: 1rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.3s;
+      }
+      button.primary:hover {
+        background-color: #017a4e;
+      }
+    `; 
+  }
 
   constructor() {
     super();
     this.tasks = [
-      { id: 1, name: 'Reunión de Proyecto', notes: 'Preparar presentación.', time: '10:00', priority: 'alta', date: 'hoy' },
-      { id: 2, name: 'Almuerzo con el equipo', notes: 'Discutir avances.', time: '13:00', priority: 'media', date: 'hoy' },
-      { id: 3, name: 'Presentación de propuesta', notes: 'Cliente final.', time: '09:00', priority: 'alta', date: 'mañana' },
-      { id: 4, name: 'Revisión de código', notes: 'Código de implementación.', time: '14:00', priority: 'media', date: 'mañana' }
+      { id: 1, name: 'Reunión de Proyecto', notes: 'Preparar presentación para la reunión con el equipo.', time: '10:00', priority: 'alta', date: 'hoy' },
+      { id: 2, name: 'Almuerzo con el equipo', notes: 'Discutir avances del proyecto durante el almuerzo.', time: '13:00', priority: 'media', date: 'hoy' },
+      { id: 3, name: 'Presentación de la propuesta', notes: 'Presentar la propuesta final al cliente.', time: '09:00', priority: 'alta', date: 'mañana' },
+      { id: 4, name: 'Revisión de código', notes: 'Revisar el código de la implementación actual.', time: '14:00', priority: 'media', date: 'mañana' },
     ];
-    this.showAddModal = false;
-    this.showDetailModal = false;
-    this.currentTaskId = null;
-    this.editingTaskId = null;
-    this.isEditing = false;
-    this.nextId = 5;
+    this._showAddModal = false;
+    this._showDetailModal = false;
+    this._currentTaskId = null;
+    this._isEditing = false;
+    this._editingTaskId = null;
+    this._nextId = 5;
   }
 
   render() {
-    const grouped = this._groupTasksByDate();
+    const groupedTasks = this._groupTasksByDate(this.tasks);
 
     return html`
-      ${Object.entries(grouped).map(([date, items]) => html`
-        <h3>${this._capitalize(date)}</h3>
-        ${items.map(task => html`
-          <espe-task-item
+      ${Object.keys(groupedTasks).map(date => html`
+        <h3 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+          ${this._capitalizeFirstLetter(date)}
+        </h3>
+        ${groupedTasks[date].map(task => html`
+          <espe-task-item 
             .task=${task}
-            @show-detail=${() => this._showDetail(task.id)}
-            @edit-task=${() => this._editTask(task.id)}
-            @delete-task=${() => this._deleteTask(task.id)}>
-          </espe-task-item>
+            @edit-task=${this._editTask}
+            @delete-task=${this._deleteTask}
+            @show-task-details=${this._showTaskDetails}
+          ></espe-task-item>
         `)}
       `)}
+
+      <espe-task-modal 
+        ?show=${this._showAddModal}
+        ?isEditing=${this._isEditing}
+        .task=${this._editingTask}
+        @close=${this._closeAddModal}
+        @save-task=${this._saveTask}
+      ></espe-task-modal>
 
       <div class="container-boton">
         <button class="primary" @click=${this._openAddModal}>+ Agregar tarea</button>
       </div>
 
-      <espe-task-modal
-        .visible=${this.showAddModal}
-        .isEditing=${this.isEditing}
-        .task=${this._editingTask()}
-        @close=${this._closeModal}
-        @save=${this._saveTask}>
-      </espe-task-modal>
-
-      <espe-task-detail
-        .visible=${this.showDetailModal}
-        .task=${this._currentTask()}
-        @close=${this._closeDetail}
-        @edit=${this._editCurrent}
-        @complete=${this._completeCurrent}>
-      </espe-task-detail>
+      <espe-task-detail 
+        ?show=${this._showDetailModal}
+        .task=${this._currentTask || null}
+        @close=${this._closeDetailModal}
+        @edit-task=${this._editCurrentTask}
+        @complete-task=${this._completeCurrentTask}
+      ></espe-task-detail>
     `;
   }
 
-  _groupTasksByDate() {
-    return this.tasks.reduce((acc, t) => {
-      acc[t.date] = acc[t.date] || [];
-      acc[t.date].push(t);
+  _groupTasksByDate(tasks) {
+    return tasks.reduce((acc, task) => {
+      acc[task.date] = acc[task.date] || [];
+      acc[task.date].push(task);
       return acc;
     }, {});
   }
 
-  _capitalize(text) {
-    return text.charAt(0).toUpperCase() + text.slice(1);
+  _capitalizeFirstLetter(string) {
+    if (!string) return '';
+    return string.charAt(0).toUpperCase() + string.slice(1);
   }
 
-  _currentTask() {
-    return this.tasks.find(t => t.id === this.currentTaskId);
+  _formatTime(time) {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${period}`;
   }
 
-  _editingTask() {
-    return this.tasks.find(t => t.id === this.editingTaskId) || null;
+  _showTaskDetails(e) {
+    this._currentTaskId = e.detail.taskId;
+    this._showDetailModal = true;
+    this._showAddModal = false;
+  }
+
+  get _currentTask() {
+    return this.tasks.find(t => t.id === this._currentTaskId);
   }
 
   _openAddModal() {
-    this.showAddModal = true;
-    this.isEditing = false;
-    this.editingTaskId = null;
+    this._isEditing = false;
+    this._editingTaskId = null;
+    this._showAddModal = true;
+    this._showDetailModal = false;
   }
 
-  _showDetail(id) {
-    this.currentTaskId = id;
-    this.showDetailModal = true;
+  _closeAddModal() {
+    this._showAddModal = false;
+    this._isEditing = false;
+    this._editingTaskId = null;
   }
 
-  _closeDetail() {
-    this.showDetailModal = false;
-    this.currentTaskId = null;
-  }
-
-  _editCurrent() {
-    this._editTask(this.currentTaskId);
-    this.showDetailModal = false;
-  }
-
-  _editTask(id) {
-    this.isEditing = true;
-    this.editingTaskId = id;
-    this.showAddModal = true;
-  }
-
-  _deleteTask(id) {
-    const confirmDelete = confirm('¿Eliminar esta tarea?');
-    if (confirmDelete) {
-      this.tasks = this.tasks.filter(t => t.id !== id);
-      this.requestUpdate();
-    }
-  }
-
-  _completeCurrent() {
-    this.tasks = this.tasks.filter(t => t.id !== this.currentTaskId);
-    this._closeDetail();
+  _closeDetailModal() {
+    this._showDetailModal = false;
+    this._currentTaskId = null;
   }
 
   _saveTask(e) {
-    const detail = e.detail;
-    if (this.isEditing && this.editingTaskId !== null) {
-      this.tasks = this.tasks.map(t => t.id === this.editingTaskId ? { ...t, ...detail } : t);
+    e.preventDefault();
+    const { name, notes, time, priority } = e.detail;
+
+    if (this._isEditing && this._editingTaskId != null) {
+      this.tasks = this.tasks.map(task => {
+        if (task.id === this._editingTaskId) {
+          return { ...task, name, notes, time, priority };
+        }
+        return task;
+      });
     } else {
-      this.tasks = [...this.tasks, { id: this.nextId++, ...detail, date: 'hoy' }];
+      this.tasks = [
+        ...this.tasks,
+        {
+          id: this._nextId++,
+          name,
+          notes,
+          time,
+          priority,
+          date: 'hoy',
+        }
+      ];
     }
 
-    this._closeModal();
+    this._isEditing = false;
+    this._editingTaskId = null;
+    this._showAddModal = false;
   }
 
-  _closeModal() {
-    this.showAddModal = false;
-    this.isEditing = false;
-    this.editingTaskId = null;
+  _editTask(e) {
+    const taskId = e.detail.taskId;
+    const task = this.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    this._isEditing = true;
+    this._editingTaskId = taskId;
+    this._editingTask = task;
+    this._showAddModal = true;
+    this._showDetailModal = false;
+  }
+
+  _deleteTask(e) {
+    const taskId = e.detail.taskId;
+    const task = this.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (confirm(`¿Estás seguro de que deseas eliminar la tarea "${task.name}"?`)) {
+      this.tasks = this.tasks.filter(t => t.id !== taskId);
+      if (this._currentTaskId === taskId) {
+        this._showDetailModal = false;
+        this._currentTaskId = null;
+      }
+    }
+  }
+
+  _editCurrentTask() {
+    if (!this._currentTaskId) return;
+    this.dispatchEvent(new CustomEvent('edit-task', { 
+      detail: { taskId: this._currentTaskId },
+      bubbles: true,
+      composed: true 
+    }));
+  }
+
+  _completeCurrentTask() {
+    if (!this._currentTaskId) return;
+    this.tasks = this.tasks.filter(t => t.id !== this._currentTaskId);
+    this._showDetailModal = false;
+    this._currentTaskId = null;
   }
 }
 
