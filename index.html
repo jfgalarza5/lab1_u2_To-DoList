@@ -15,7 +15,18 @@
     onload="this.rel='stylesheet'"
     href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
   />
-  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0e1c17;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+    .container-tareas {
+      margin-inline: 200px;
+    }
+  </style>
 </head>
 <body>
   <header class="flex flex-col md:flex-row items-center justify-between whitespace-nowrap border-b border-solid border-b-[#214a3c] px-4 md:px-10 py-3">
@@ -75,7 +86,9 @@
       </div>
     </div>
   </header>
-  <espe-task-list></espe-task-list>
+  <div class="container-tareas">
+    <espe-task-list></espe-task-list>
+  </div>
 
   <script type="module" src="./src/index.js"></script>
 </body>

@@ -41,12 +41,7 @@ export class EspeTaskList extends LitElement {
 
   constructor() {
     super();
-    this.tasks = [
-      { id: 1, name: 'Reunión de Proyecto', notes: 'Preparar presentación para la reunión con el equipo.', time: '10:00', priority: 'alta', date: 'hoy' },
-      { id: 2, name: 'Almuerzo con el equipo', notes: 'Discutir avances del proyecto durante el almuerzo.', time: '13:00', priority: 'media', date: 'hoy' },
-      { id: 3, name: 'Presentación de la propuesta', notes: 'Presentar la propuesta final al cliente.', time: '09:00', priority: 'alta', date: 'mañana' },
-      { id: 4, name: 'Revisión de código', notes: 'Revisar el código de la implementación actual.', time: '14:00', priority: 'media', date: 'mañana' },
-    ];
+    this.tasks = [];
     this._showAddModal = false;
     this._showDetailModal = false;
     this._currentTaskId = null;
